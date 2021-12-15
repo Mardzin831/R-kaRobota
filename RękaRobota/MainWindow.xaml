@@ -8,7 +8,7 @@
         Title="MainWindow" Height="609.926" Width="781.112">
     <Viewbox Stretch="Fill" Margin="101,0,-0.6,0">
         <Grid Height="300" Width="300">
-            <Border Margin="10" BorderThickness="1" BorderBrush="DarkBlue">
+            <Border Margin="10" BorderThickness="0.3" BorderBrush="DarkBlue">
                 <InkCanvas x:Name="drawSpace" MouseLeftButtonUp="MouseUp" PreviewMouseLeftButtonDown="MouseDown">
                     <InkCanvas.DefaultDrawingAttributes>
                         <DrawingAttributes Color="Red" Width="2" Height="2" StylusTip="Rectangle"/>
