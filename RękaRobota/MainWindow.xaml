@@ -15,7 +15,7 @@
                     </InkCanvas.DefaultDrawingAttributes>
                 </InkCanvas>
             </Border>
-            <Button Content="" HorizontalAlignment="Left" Height="151" Margin="-41,117,0,0" VerticalAlignment="Top" Width="46" Grid.RowSpan="2"/>
+            <Button Content="Ucz" HorizontalAlignment="Left" Height="151" Click="TrainClick" Margin="-41,117,0,0" VerticalAlignment="Top" Width="46" Grid.RowSpan="2"/>
             <Button Content="" HorizontalAlignment="Left" Height="82" Margin="-41,30,0,0" VerticalAlignment="Top" Width="46"/>
             <Button Content="" Background="Red" HorizontalAlignment="Left" Height="11" Margin="-36,39,0,0" VerticalAlignment="Top" Width="10"/>
             <Button Content="" Background="Red" HorizontalAlignment="Left" Height="11" Margin="-10,39,0,0" VerticalAlignment="Top" Width="10"/>
