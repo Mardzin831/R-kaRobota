@@ -24,16 +24,16 @@ namespace RękaRobota
         public double learn_const = 0.1;
         public double hand_size = 70;
 
-        public static List<int> layers = new List<int>() { 2, 4, 4, 2 };
+        public static int[] layers = new int[] { 2, 4, 4, 2 };
         public static int layers_amount = layers.Count();
 
-        public List<List<double>> weights = new List<List<double>>();
-        public List<List<double>> bias = new List<List<double>>();
+        public double[][][] weights = new double[layers_amount][][];
+        public double[][] bias = new double[layers_amount][];
 
-        public List<List<double>> before_activation = new List<List<double>>(new List<double>[layers_amount]);
-        public List<List<double>> after_activation = new List<List<double>>(new List<double>[layers_amount]);
-        public List<List<double>> delta = new List<List<double>>(new List<double>[layers_amount]);
-        public List<List<double>> second_delta = new List<List<double>>(new List<double>[layers_amount]);
+        public double[][] before_activation = new double[layers_amount][];
+        public double[][] after_activation = new double[layers_amount][];
+        public double[][] delta = new double[layers_amount][];
+        public double[][] second_delta = new double[layers_amount][];
  
         public Random randA = new Random();
         public Random randW = new Random();
@@ -46,74 +46,89 @@ namespace RękaRobota
             attributes.Width = 2;
             attributes.Height = 2;
 
-            List<double> tmpW = new List<double>() { 0 };
-            List<double> tmpB = new List<double>() { 0 };
-            weights.Add(tmpW);
-            bias.Add(tmpB);
+            weights[0] = new double[][] { new double[] { 0 } };
+            bias[0] = new double[] { 0 };
 
             // losowanie wag
-            for (int i = 0; i < layers_amount - 1; i++)
+            for (int k = 0; k < layers_amount - 1; k++)
             {
-                tmpW = new List<double>();
-                tmpB = new List<double>();
-                for (int j = 0; j < layers[i] * layers[i + 1]; j++)
+                weights[k + 1] = new double[layers[k]][];
+                bias[k + 1] = new double[layers[k + 1]];
+                for (int i = 0; i < layers[k]; i++)
                 {
-                    tmpW.Add(2.0 * randW.NextDouble() - 1.0);
-                }
-                for (int k = 0; k < layers[i + 1]; k++)
-                {
-                    tmpB.Add(2.0 * randW.NextDouble() - 1.0);
-                }
-                weights.Add(tmpW);
-                bias.Add(tmpB);
-            }
-
-            for (int i = 0; i < weights.Count(); i++)
-            {
-                for (int j = 0; j < weights[i].Count(); j++)
-                {
-                    Debug.Write(weights[i][j] + " ");
+                    weights[k + 1][i] = new double[layers[k + 1]];
+                    for (int j = 0; j < layers[k + 1]; j++)
+                    {
+                        weights[k + 1][i][j] = 2.0 * randW.NextDouble() - 1.0;
+                        Debug.Write(weights[k + 1][i][j] + " ");
+                    }
+                    Debug.WriteLine("");
                 }
                 Debug.WriteLine("");
-            }
-            Debug.WriteLine("---------------------");
-            var tw = Transpose(weights);
-            for (int i = 0; i < tw.Count(); i++)
-            { 
-                for (int j = 0; j < tw[i].Count(); j++)
+                for (int i = 0; i < layers[k + 1]; i++)
                 {
-                    Debug.Write(tw[i][j] + " ");
+                    bias[k + 1][i] = 2.0 * randW.NextDouble() - 1.0;
+                }
+            }
+            Debug.WriteLine("---------------Transposed------------------");
+            double[][][] tmp = new double[layers_amount][][];
+            for (int k = 0; k < layers_amount - 1; k++)
+            {
+                tmp[k + 1] = Transpose(weights[k + 1]);
+
+                for (int i = 0; i < layers[k + 1]; i++)
+                {
+                    for (int j = 0; j < layers[k]; j++)
+                    {
+                        Debug.Write(tmp[k + 1][i][j] + " ");
+                    }
+                    Debug.WriteLine("");
                 }
                 Debug.WriteLine("");
             }
         }
-        public List<List<double>> Transpose(List<List<double>> tmpList)
+
+        public double[] DotProduct(double[][] tmpW, double[] tmpD, int size1, int size2)
         {
-            var result = tmpList
+            double[] result = new double[size1];
+
+            for (int k = 0; k < size1; k++)
+            {
+                for (int i = 0; i < size2; i++)
+                {
+                    for (int j = 0; j < size2; j++)
+                    {
+                        result[k] += tmpW[k][j] * tmpD[i];
+                    }
+                }
+            }
+            return result;
+        }
+        public double[][] Transpose(double[][] tmpArray)
+        {
+            var result = tmpArray
                 .SelectMany(inner => inner.Select((item, index) => new { item, index }))
                 .GroupBy(i => i.index, i => i.item)
-                .Select(g => g.ToList())
-                .ToList();
+                .Select(g => g.ToArray())
+                .ToArray();
 
             return result;
         }
 
         // liczenie delty i aktualizacja wag
-        public void BackPropagation(List<double> sample)
+        public void BackPropagation(double[] sample)
         {
-            List<double> SS = new List<double>(SecondSigmoid(after_activation[-1]));
+            double[] SS = SecondSigmoid(after_activation[-1]);
             delta[-1][0] = (after_activation[-1][0] - sample[0]) * SS[0];
             delta[-1][1] = (after_activation[-1][1] - sample[1]) * SS[1];
 
             // delty od przedostatniej do pierwszej
             for (int i = layers_amount - 2; i >= 0; i--)
             {
-                for (int j = 0; j >= 0; i--)
-                {
-                    second_delta[i] = delta[i - 1].dot(weights[i - 1].T);
-                }
+                second_delta[i] = DotProduct(Transpose(weights[i + 1]), delta[i + 1], layers[i], layers[i + 1]);
                 
             }
+            Debug.WriteLine(second_delta[0]);
         }
         public void StepForward()
         {
@@ -131,7 +146,7 @@ namespace RękaRobota
         {
             for(int i = 0; i < rounds; i++)
             {
-                List<double> sample = new List<double>(RandRadians());
+                double[] sample = RandRadians();
 
                 after_activation[0] = Input(sample);
                 after_activation[0][0] /= (hand_size * 2);
@@ -145,7 +160,7 @@ namespace RękaRobota
             }
         }
         // funkcja aktywacji
-        public List<double> Sigmoid(List<double> x)
+        public double[] Sigmoid(double[] x)
         {
             for(int i = 0; i < x.Count(); i++)
             {
@@ -154,7 +169,7 @@ namespace RękaRobota
             return x;
         }
         // pochodna funkcji aktywacji
-        public List<double> SecondSigmoid(List<double> x)
+        public double[] SecondSigmoid(double[] x)
         {
             for (int i = 0; i < x.Count(); i++)
             {
@@ -163,33 +178,33 @@ namespace RękaRobota
             return x;
         }
         // kąty w radianach (0 - pi)
-        public List<double> RandRadians()
+        public double[] RandRadians()
         {
-            List<double> degrees = new List<double>() { randA.NextDouble() * 180, randA.NextDouble() * 180 };
+            double[] degrees = new double[] { randA.NextDouble() * 180, randA.NextDouble() * 180 };
             return degrees;
         }
         // normalizacja stopni (0.1 - 0.9)
-        public List<double> NormalizeDegrees(List<double> degrees)
+        public double[] NormalizeDegrees(double[] degrees)
         {
-            List<double> norm_degrees = new List<double>();
+            double[] norm_degrees = new double[degrees.Count()];
             foreach (double tmp in degrees)
             {
-                norm_degrees.Add(0.8 * tmp / Math.PI + 0.1);
+                norm_degrees.Append(0.8 * tmp / Math.PI + 0.1);
             }
             return norm_degrees;
         }
         // cofa normalizacje (0 - 180)
-        public List<double> UnnormalizeDegrees(List<double> degrees)
+        public double[] UnnormalizeDegrees(double[] degrees)
         {
-            List<double> unnorm_degrees = new List<double>();
+            double[] unnorm_degrees = new double[degrees.Count()];
             foreach (double tmp in degrees)
             {
-                unnorm_degrees.Add((tmp - 0.1) * Math.PI / 0.8);
+                unnorm_degrees.Append((tmp - 0.1) * Math.PI / 0.8);
             }
             return unnorm_degrees;
         }
         // końcowe współrzędne ręki robota
-        public List<double> Input(List<double> angles)
+        public double[] Input(double[] angles)
         {
             double xa, ya, xb, yb;
 
@@ -199,7 +214,7 @@ namespace RękaRobota
             xb = xa + (0 + xa) * Math.Cos(angles[1]) + (ya - 130) * Math.Sin(angles[1]);
             yb = ya + (0 - xa) * Math.Sin(angles[1]) + (ya - 130) * Math.Cos(angles[1]);
 
-            return new List<double>(){ xb, yb };
+            return new double[] { xb, yb };
         }
         private new void MouseUp(object sender, MouseButtonEventArgs e)
         {
