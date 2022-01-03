@@ -21,9 +21,9 @@ namespace RękaRobota
 {
     public partial class MainWindow : Window
     {
-        public int rounds = 1;//500000;
+        public int rounds = 500000;
         public double learn_const = 0.1;
-        public double hand_size = 70;
+        public double hand_size = 50;
 
         public static int[] layers = new int[] { 2, 3, 4, 2 };
         public static int layers_amount = layers.Count();
@@ -61,16 +61,30 @@ namespace RękaRobota
                     for (int j = 0; j < layers[k + 1]; j++)
                     {
                         weights[k + 1][i][j] = 2.0 * randW.NextDouble() - 1.0;
-                        Debug.Write(weights[k + 1][i][j] + " ");
                     }
-                    Debug.WriteLine("");
-                }
-                Debug.WriteLine("");
+                }  
                 for (int i = 0; i < layers[k + 1]; i++)
                 {
                     bias[k + 1][i] = 2.0 * randW.NextDouble() - 1.0;
                 }
             }
+            PrintWeights();
+        }
+        public void PrintWeights()
+        {
+            for (int k = 0; k < layers_amount - 1; k++)
+            {
+                for (int i = 0; i < layers[k]; i++)
+                { 
+                    for (int j = 0; j < layers[k + 1]; j++)
+                    {
+                        Debug.Write(weights[k + 1][i][j] + " ");
+                    }
+                    Debug.WriteLine("");
+                }
+                Debug.WriteLine("");
+            }
+            Debug.WriteLine("------------------------------------");
             //Debug.WriteLine("---------------Transposed------------------");
             //double[][][] tmp = new double[layers_amount][][];
             //for (int k = 0; k < layers_amount - 1; k++)
@@ -87,9 +101,23 @@ namespace RękaRobota
             //    }
             //    Debug.WriteLine("");
             //}
-            
         }
-        
+        public double[][] Reshape(double[] tmp, int size1, int size2)
+        {
+            double[][] result = new double[size1][];
+
+            for (int i = 0; i < size1; i++)
+            {
+                result[i] = new double[size2];
+                for (int j = 0; j < size2; j++)
+                {
+                    result[i][j] = tmp[i * size2 + j];
+                }
+            }
+
+            return result;
+        }
+
         public double[] DotProduct(double[][] tmpW, double[] tmpD, int size1, int size2)
         {
             double[] result = new double[size1];
@@ -107,6 +135,23 @@ namespace RękaRobota
             
             return result;
         }
+        public double[] DotProduct2(double[][] tmpW, double[][] tmpD, int size1, int size2)
+        {
+            double[] result = new double[size2];
+            //Debug.WriteLine(size1 + " " + size2);
+            //Debug.WriteLine(tmpW.Length + " " + tmpD.Length);
+
+            for (int i = 0; i < size2; i++)
+            {
+                for (int j = 0; j < size1; j++)
+                {
+                    result[i] += tmpW[j][0] * tmpD[0][i];
+                    //Debug.WriteLine(result[i]);
+                }
+            }
+
+            return result;
+        }
         public double[][] Transpose(double[][] tmpArray)
         {
             var result = tmpArray
@@ -122,6 +167,7 @@ namespace RękaRobota
         public void BackPropagation(double[] sample)
         {
             double[] SS = SecondSigmoid(after_activation[layers_amount - 1]);
+            delta[layers_amount - 1] = new double[2];
             delta[layers_amount - 1][0] = (after_activation[layers_amount - 1][0] - sample[0]) * SS[0];
             delta[layers_amount - 1][1] = (after_activation[layers_amount - 1][1] - sample[1]) * SS[1];
 
@@ -129,17 +175,26 @@ namespace RękaRobota
             for (int i = layers_amount - 2; i >= 0; i--)
             {
                 second_delta[i] = DotProduct(Transpose(weights[i + 1]), delta[i + 1], layers[i], layers[i + 1]);
+                delta[i] = new double[layers[i]];
                 for (int j = 0; j < layers[i]; j++)
                 {
                     delta[i][j] = second_delta[i][j] * SecondSigmoid(after_activation[i])[j];
                 } 
             }
             // aktualizacja wag
-            for (int i = 1; i < layers_amount; i++)
+            for (int k = 0; k < layers_amount - 1; k++)
             {
-                for (int j = 1; j < layers[i]; j++)
+                for (int i = 0; i < layers[k]; i++)
                 {
-                    //weights[i][j] -= 
+                    for (int j = 0; j < layers[k + 1]; j++)
+                    {
+                        weights[k + 1][i][j] -= learn_const * DotProduct2(Reshape(after_activation[k], layers[k], 1), 
+                            Reshape(delta[k + 1], 1, layers[k + 1]), layers[k], layers[k + 1])[j];
+                    }
+                }
+                for (int i = 0; i < layers[k + 1]; i++)
+                {
+                    bias[k + 1][i] -= learn_const * delta[k + 1][i];
                 }
             }
         }
@@ -167,9 +222,11 @@ namespace RękaRobota
             // zdobycie przewidywanych kątów
             for (int i = 1; i < layers_amount; i++)
             {
+                double[] tmp = DotProduct(weights[i], after_activation[i - 1], layers[i], layers[i - 1]);
+                before_activation[i] = new double[layers[i]];
                 for (int j = 0; j < layers[i]; j++)
                 {
-                    before_activation[i][j] = DotProduct(weights[i], after_activation[i - 1], layers[i], layers[i + 1])[j] + bias[i][j];
+                    before_activation[i][j] = tmp[j] + bias[i][j];
                 }
                 after_activation[i] = Sigmoid(before_activation[i]);
             }
@@ -181,6 +238,7 @@ namespace RękaRobota
         private void TrainClick(object sender, RoutedEventArgs e)
         {
             Train();
+            PrintWeights();
         }
         public void Train()
         {
@@ -197,7 +255,7 @@ namespace RękaRobota
                 StepForward();
 
                 // poprawianie delt
-                //BackPropagation(sample);
+                BackPropagation(sample);
             }
         }
         // funkcja aktywacji
