@@ -325,13 +325,13 @@ namespace RękaRobota
             List<Stroke> l = new List<Stroke>();
             StylusPointCollection points = new StylusPointCollection();
 
-            xa = hand_size * Math.Sin(alfa);
+            xa = hand_size * Math.Sin(alfa) + 100;
             ya = -hand_size * Math.Cos(alfa) + 130;
 
-            xb = xa + (0 + xa) * Math.Cos(beta) + (ya - 130) * Math.Sin(beta);
-            yb = ya + (0 - xa) * Math.Sin(beta) + (ya - 130) * Math.Cos(beta);
+            xb = xa + (-100 + xa) * Math.Cos(beta) + (ya - 130) * Math.Sin(beta);
+            yb = ya + (100 - xa) * Math.Sin(beta) + (ya - 130) * Math.Cos(beta);
 
-            p0 = new StylusPoint(0, 130);
+            p0 = new StylusPoint(100, 130);
             p1 = new StylusPoint(xa, ya);
             p2 = new StylusPoint(xb, yb);
 
