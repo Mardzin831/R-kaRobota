@@ -21,11 +21,12 @@ namespace RękaRobota
 {
     public partial class MainWindow : Window
     {
-        public int rounds = 500000;
+        public int rounds = 100;
         public double learn_const = 0.1;
         public double hand_size = 50;
+        public double ERROR = 0;
 
-        public static int[] layers = new int[] { 2, 3, 4, 2 };
+        public static int[] layers = new int[] { 2, 6, 3, 4, 2 };
         public static int layers_amount = layers.Count();
 
         public double[][][] weights = new double[layers_amount][][];
@@ -230,7 +231,9 @@ namespace RękaRobota
                 }
                 after_activation[i] = Sigmoid(before_activation[i]);
             }
-
+            Debug.WriteLine("");
+            Debug.WriteLine(after_activation[layers_amount - 1][0] + " " + after_activation[layers_amount - 1][1]);
+            Debug.WriteLine(UnnormalizeDegrees(after_activation[layers_amount - 1])[0] + " x " + UnnormalizeDegrees(after_activation[layers_amount - 1])[1]);
             // odnormalizowane wartości kątów
             return UnnormalizeDegrees(after_activation[layers_amount - 1]);
         }
@@ -261,7 +264,7 @@ namespace RękaRobota
         // funkcja aktywacji
         public double[] Sigmoid(double[] x)
         {
-            for(int i = 0; i < x.Count(); i++)
+            for(int i = 0; i < x.Length; i++)
             {
                 x[i] = 1 / (1 + Math.Exp(-x[i]));
             }
@@ -279,27 +282,25 @@ namespace RękaRobota
         // kąty w radianach (0 - pi)
         public double[] RandRadians()
         {
-            double[] degrees = new double[] { randA.NextDouble() * 180, randA.NextDouble() * 180 };
+            double[] degrees = new double[] { Math.PI * randA.NextDouble() , Math.PI * randA.NextDouble() };
             return degrees;
         }
         // normalizacja stopni (0.1 - 0.9)
         public double[] NormalizeDegrees(double[] degrees)
         {
-            double[] norm_degrees = new double[degrees.Count()];
-            foreach (double tmp in degrees)
-            {
-                norm_degrees.Append(0.8 * tmp / Math.PI + 0.1);
-            }
+            double[] norm_degrees = new double[2];
+            norm_degrees[0] = 0.8 * degrees[0] / Math.PI + 0.1;
+            norm_degrees[1] = 0.8 * degrees[1] / Math.PI + 0.1;
+
             return norm_degrees;
         }
         // cofa normalizacje (0 - 180)
         public double[] UnnormalizeDegrees(double[] degrees)
         {
-            double[] unnorm_degrees = new double[degrees.Count()];
-            foreach (double tmp in degrees)
-            {
-                unnorm_degrees.Append((tmp - 0.1) * Math.PI / 0.8);
-            }
+            double[] unnorm_degrees = new double[2];
+            unnorm_degrees[0] = (degrees[0] - 0.1) * Math.PI / 0.8;
+            unnorm_degrees[1] = (degrees[1] - 0.1) * Math.PI / 0.8;
+            
             return unnorm_degrees;
         }
         // końcowe współrzędne ręki robota
@@ -307,19 +308,29 @@ namespace RękaRobota
         {
             double xa, ya, xb, yb;
 
-            xa = hand_size * Math.Sin(angles[0]);
+            xa = hand_size * Math.Sin(angles[0]) + 100;
             ya = -hand_size * Math.Cos(angles[0]) + 130;
 
-            xb = xa + (0 + xa) * Math.Cos(angles[1]) + (ya - 130) * Math.Sin(angles[1]);
-            yb = ya + (0 - xa) * Math.Sin(angles[1]) + (ya - 130) * Math.Cos(angles[1]);
+            xb = xa + (-100 + xa) * Math.Cos(angles[1]) + (ya - 130) * Math.Sin(angles[1]);
+            yb = ya + (100 - xa) * Math.Sin(angles[1]) + (ya - 130) * Math.Cos(angles[1]);
 
             return new double[] { xb, yb };
         }
         private new void MouseUp(object sender, MouseButtonEventArgs e)
         {
-            double xa, ya, xb, yb;
-            alfa = randA.NextDouble() * Math.PI;
-            beta = randA.NextDouble() * Math.PI;
+            double xa, ya, xb, yb, clickedX, clickedY;
+
+            clickedX = drawSpace.Strokes.First().StylusPoints.First().X;
+            clickedY = drawSpace.Strokes.First().StylusPoints.First().Y;
+
+            //alfa = randA.NextDouble() * Math.PI;
+            //beta = randA.NextDouble() * Math.PI;
+            double[] predicted_degrees = Predict(new double[] { clickedX, clickedY });
+            
+            alfa = predicted_degrees[0];
+            beta = predicted_degrees[1];
+            Debug.WriteLine("\nKąty wyjściowe: " + alfa + " " + beta);
+
             StylusPoint p0, p1, p2;
 
             List<Stroke> l = new List<Stroke>();
@@ -342,6 +353,14 @@ namespace RękaRobota
             Stroke s = new Stroke(points, attributes);
             l.Add(s);
             drawSpace.Strokes.Add(s);
+
+            // odległość między przewidywaną a prawdziwą wartością(błąd)
+            double error = Math.Abs(-Math.Sqrt(Math.Pow(xb - clickedX, 2) + Math.Pow(yb - clickedY, 2)));
+
+            Debug.WriteLine("Punkt: X: " + clickedX + " Y: " + clickedY);
+            Debug.WriteLine("ERROR: " + error);
+            Debug.WriteLine(Input(predicted_degrees)[0] + " " + Input(predicted_degrees)[1]);
+
         }
 
         private new void MouseDown(object sender, MouseButtonEventArgs e)

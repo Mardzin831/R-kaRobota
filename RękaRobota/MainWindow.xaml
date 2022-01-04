@@ -20,6 +20,7 @@
             <Button Content="" Background="Red" HorizontalAlignment="Left" Height="11" Margin="-36,39,0,0" VerticalAlignment="Top" Width="10"/>
             <Button Content="" Background="Red" HorizontalAlignment="Left" Height="11" Margin="-10,39,0,0" VerticalAlignment="Top" Width="10"/>
             <Button Content="" Background="Black" HorizontalAlignment="Left" Height="11" Margin="-36,75,0,0" VerticalAlignment="Top" Width="36"/>
+            <Button Content="" HorizontalAlignment="Left" Margin="6,137,0,0" VerticalAlignment="Top" Width="102" Height="7"/>
 
         </Grid>
     </Viewbox>
