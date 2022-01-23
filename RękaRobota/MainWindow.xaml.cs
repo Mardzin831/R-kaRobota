@@ -21,13 +21,13 @@ namespace RękaRobota
 {
     public partial class MainWindow : Window
     {
-        public int rounds = 10;
+        public int rounds = 100000;
         public double learn_const = 0.1;
         public double hand_size = 50;
         public double ERROR = 0;
         public int goodCounter = 0;
 
-        public static int[] layers = new int[] { 2, 6, 3, 2 };
+        public static int[] layers = new int[] { 2, 9,9, 2 };
         public static int layers_amount = layers.Length;
 
         public double[][][] weights = new double[layers_amount][][];
@@ -73,13 +73,17 @@ namespace RękaRobota
             }
             //PrintWeights();
             Debug.WriteLine("");
-
-            double[] t = DotProduct2(new double[][] { new double[] { 1 }, new double[] { 2 } }
-                , new double[][] { new double[] { 1, 2 } }, 2, 2);
-            for (int i = 0; i < t.Length; i++)
-            {
-                Debug.Write(t[i] + " ");
-            }
+    
+            //double[][] t = DotProduct(new double[][] { new double[] { 1 }, new double[] { 2 } }
+            //    , new double[][] { new double[] { 1, 2 } });
+            //for (int i = 0; i < t.Length; i++)
+            //{
+            //    Debug.WriteLine("");
+            //    for (int j = 0; j < t[0].Length; j++)
+            //    {
+            //        Debug.Write(t[i][j] + " ");
+            //    }
+            //}
             
         }
         public void PrintWeights()
@@ -130,40 +134,27 @@ namespace RękaRobota
             return result;
         }
 
-        public double[] DotProduct(double[][] tmpW, double[] tmpD, int size1, int size2)
+        public double[][] DotProduct(double[][] tmp1, double[][] tmp2)
         {
-            double[] result = new double[size1];
-            //Debug.WriteLine(size1 + " " + size2);
-            //Debug.WriteLine(tmpW.Length + " " + tmpD.Length);
-
+            int size1 = tmp1.Length;
+            int size2 = tmp2[0].Length;
+            int size3 = tmp2.Length;
+            double[][] result = new double[size1][];
+            
             for (int i = 0; i < size1; i++)
             {
+                result[i] = new double[size2];
                 for (int j = 0; j < size2; j++)
                 {
-                    result[i] += tmpD[j] * tmpW[j][i];
-                    //Debug.WriteLine(result[i]);
+                    for (int k = 0; k < size3; k++)
+                    {
+                        result[i][j] += tmp1[i][k] * tmp2[k][j];
+                    }
                 }
             }
-
             return result;
         }
-        public double[] DotProduct2(double[][] tmpW, double[][] tmpD, int size1, int size2)
-        {
-            double[] result = new double[size2];
-            //Debug.WriteLine(size1 + " " + size2);
-            //Debug.WriteLine(tmpW.Length + " " + tmpD.Length);
 
-            for (int i = 0; i < size2; i++)
-            {
-                for (int j = 0; j < size1; j++)
-                {
-                    result[i] += tmpW[j][0] * tmpD[0][i];
-                    //Debug.WriteLine(result[i]);
-                }
-            }
-
-            return result;
-        }
         public double[][] Transpose(double[][] tmpArray)
         {
             var result = tmpArray
@@ -178,7 +169,7 @@ namespace RękaRobota
         // liczenie delty i aktualizacja wag
         public void BackPropagation(double[] sample)
         {
-            double[] SS = SecondSigmoid(after_activation[layers_amount - 1]);
+            double[] SS = (double[]) SecondSigmoid(after_activation[layers_amount - 1]).Clone();
             delta[layers_amount - 1] = new double[2];
             delta[layers_amount - 1][0] = (after_activation[layers_amount - 1][0] - sample[0]) * SS[0];
             delta[layers_amount - 1][1] = (after_activation[layers_amount - 1][1] - sample[1]) * SS[1];
@@ -186,11 +177,16 @@ namespace RękaRobota
             // delty od przedostatniej do pierwszej
             for (int i = layers_amount - 2; i >= 0; i--)
             {
-                second_delta[i] = DotProduct(Transpose(weights[i + 1]), delta[i + 1], layers[i], layers[i + 1]);
+                double[][] tmpd = new double[1][] { delta[i + 1] };
+
+                second_delta[i] = (double[]) DotProduct(tmpd, Transpose(weights[i + 1]))[0].Clone();
                 delta[i] = new double[layers[i]];
+
+                double[] tmpss = (double[]) SecondSigmoid(after_activation[i]).Clone();
+
                 for (int j = 0; j < layers[i]; j++)
                 {
-                    delta[i][j] = second_delta[i][j] * SecondSigmoid(after_activation[i])[j];
+                    delta[i][j] = second_delta[i][j] * tmpss[j];
                 }
             }
             // aktualizacja wag
@@ -198,12 +194,12 @@ namespace RękaRobota
             {
                 for (int i = 0; i < layers[k - 1]; i++)
                 {
-                    var tmp = DotProduct2(Reshape(after_activation[k - 1], layers[k - 1], 1),
-                            Reshape(delta[k], 1, layers[k]), layers[k - 1], layers[k]);
+                    double[][] tmpd = (double[][]) DotProduct(Reshape(after_activation[k - 1], layers[k - 1], 1),
+                            Reshape(delta[k], 1, layers[k])).Clone();
 
                     for (int j = 0; j < layers[k]; j++)
                     {
-                        weights[k][i][j] -= learn_const * tmp[j];
+                        weights[k][i][j] -= learn_const * tmpd[i][j];
                     }
                 }
                 for (int i = 0; i < layers[k]; i++)
@@ -217,13 +213,14 @@ namespace RękaRobota
             // zapamiętanie wcześniejszej wartości dla propagacji wstecznej
             for (int i = 1; i < layers_amount; i++)
             {
-                double[] tmp = DotProduct(weights[i], after_activation[i - 1], layers[i], layers[i - 1]);
+                double[][] tmpa = new double[1][] { after_activation[i - 1] };
+                double[][] tmp = (double[][]) DotProduct(tmpa, weights[i]).Clone();
                 before_activation[i] = new double[layers[i]];
                 for (int j = 0; j < layers[i]; j++)
                 {
-                    before_activation[i][j] = tmp[j] + bias[i][j];
+                    before_activation[i][j] = tmp[0][j] + bias[i][j];
                 }
-                after_activation[i] = Sigmoid(before_activation[i]);
+                after_activation[i] = (double[]) Sigmoid(before_activation[i]).Clone();
             }
         }
 
@@ -231,29 +228,31 @@ namespace RękaRobota
         public double[] Predict(double[] input)
         {
             // umieszczenie input w warstwie wejściowej
-            after_activation[0] = input;
-            after_activation[0][0] /= (hand_size * 2);
-            after_activation[0][1] /= (hand_size * 2);
+            after_activation[0] = (double[]) input.Clone();
+            after_activation[0][0] /= hand_size * 2.0;
+            after_activation[0][1] /= hand_size * 2.0;
 
             PrintWeights();
-            Debug.WriteLine("-----before------");
+            //Debug.WriteLine("-----before------");
             // zdobycie przewidywanych kątów
             for (int i = 1; i < layers_amount; i++)
             {
-                Debug.WriteLine("");
-                double[] tmp = DotProduct(weights[i], after_activation[i - 1], layers[i], layers[i - 1]);
+                //Debug.WriteLine("");
+                double[][] tmpa = new double[1][] { after_activation[i - 1] };
+                double[][] tmp = (double[][]) DotProduct(tmpa, weights[i]).Clone();
                 before_activation[i] = new double[layers[i]];
                 for (int j = 0; j < layers[i]; j++)
                 {
-                    before_activation[i][j] = tmp[j] + bias[i][j];
-                    Debug.Write(before_activation[i][j] + " ");
+                    //Debug.WriteLine("");
+                    before_activation[i][j] = tmp[0][j] + bias[i][j];
+                    //Debug.Write(before_activation[i][j] + " ");
                 }
-                after_activation[i] = Sigmoid(before_activation[i]);
-                
+                after_activation[i] = (double[]) Sigmoid(before_activation[i]).Clone();
+
             }
-            Debug.WriteLine("\n------");
-            Debug.WriteLine(" last after " + after_activation[layers_amount - 1][0] + " " + after_activation[layers_amount - 1][1]);
-            Debug.WriteLine(UnnormalizeDegrees(after_activation[layers_amount - 1])[0] + " " + UnnormalizeDegrees(after_activation[layers_amount - 1])[1]);
+            //Debug.WriteLine("\n------");
+            //Debug.WriteLine(" last after " + after_activation[layers_amount - 1][0] + " " + after_activation[layers_amount - 1][1]);
+            //Debug.WriteLine(UnnormalizeDegrees(after_activation[layers_amount - 1])[0] + " " + UnnormalizeDegrees(after_activation[layers_amount - 1])[1]);
             // odnormalizowane wartości kątów
             return UnnormalizeDegrees(after_activation[layers_amount - 1]);
         }
@@ -263,31 +262,51 @@ namespace RękaRobota
             Train();
             //PrintWeights();
 
-            foreach (double[] q in before_activation)
-            {
-                Debug.WriteLine("++++++");
-                foreach (double r in q)
-                {
-                    Debug.Write(r + " ");
-                }
-            }
+            //foreach (double[] q in before_activation)
+            //{
+            //    Debug.WriteLine("++++++\n");
+            //    foreach (double r in q)
+            //    {
+            //        Debug.Write(r + " ");
+            //    }
+            //}
         }
         public void Train()
         {
             for (int i = 0; i < rounds; i++)
             {
-                double[] sample = RandRadians();
+                double[] sample = (double[]) RandRadians().Clone();
+                double[] trueValues = (double[]) Input(sample).Clone();
                 // wyliczenie wejścia
-                after_activation[0] = Input(sample);
+                
+                after_activation[0] = (double[]) trueValues.Clone();
+               
                 // normalizacja
-                after_activation[0][0] /= (hand_size * 2);
-                after_activation[0][1] /= (hand_size * 2);
-                sample = NormalizeDegrees(sample);
-
+                after_activation[0][0] /= hand_size * 2.0;
+                after_activation[0][1] /= hand_size * 2.0;
+                sample = (double[]) NormalizeDegrees(sample).Clone();
+                
                 StepForward();
-
                 // poprawianie delt
                 BackPropagation(sample);
+                
+                if((i + 1) % 2000 == 0)
+                {
+                    //Debug.WriteLine(after_activation[0][0] + " " + after_activation[0][1]);
+                    double[] predicted = (double[]) Input(UnnormalizeDegrees(after_activation[layers_amount - 1])).Clone();
+
+                    double errorT = Math.Abs(-Math.Sqrt(Math.Pow(predicted[0] - trueValues[0], 2) + Math.Pow(predicted[1] - trueValues[1], 2)));
+
+                    Debug.WriteLine("Trening prawdziwe punkty: " + trueValues[0] + " " + trueValues[1]);
+                    Debug.WriteLine("Trening przewidywane punkty: " + predicted[0] + " " + predicted[1]);
+                    Debug.WriteLine("Trening ERROR: " + errorT);
+                    Debug.WriteLine("----------------");
+
+                    if(errorT < 20)
+                    {
+                        break;
+                    }
+                }
             }
         }
         // funkcja aktywacji
@@ -323,7 +342,7 @@ namespace RękaRobota
 
             return norm_degrees;
         }
-        // cofa normalizacje (0 - 180)
+        // cofa normalizacje (0 - pi)
         public double[] UnnormalizeDegrees(double[] degrees)
         {
             double[] unnorm_degrees = new double[2];
@@ -336,12 +355,14 @@ namespace RękaRobota
         public double[] Input(double[] angles)
         {
             double xa, ya, xb, yb;
-
+   
             xa = hand_size * Math.Sin(angles[0]) + 100;
             ya = -hand_size * Math.Cos(angles[0]) + 130;
 
             xb = xa + (-100 + xa) * Math.Cos(angles[1]) + (ya - 130) * Math.Sin(angles[1]);
             yb = ya + (100 - xa) * Math.Sin(angles[1]) + (ya - 130) * Math.Cos(angles[1]);
+
+            //Debug.WriteLine(xb + " | " + yb);
 
             return new double[] { xb, yb };
         }
@@ -354,7 +375,7 @@ namespace RękaRobota
 
             //alfa = randA.NextDouble() * Math.PI;
             //beta = randA.NextDouble() * Math.PI;
-            double[] predicted_degrees = Predict(new double[] { clickedX, clickedY});
+            double[] predicted_degrees = (double[]) Predict(new double[] { clickedX, clickedY }).Clone();
             
             alfa = predicted_degrees[0];
             beta = predicted_degrees[1];
@@ -386,9 +407,10 @@ namespace RękaRobota
             // odległość między przewidywaną a prawdziwą wartością(błąd)
             double error = Math.Abs(-Math.Sqrt(Math.Pow(xb - clickedX, 2) + Math.Pow(yb - clickedY, 2)));
 
-            Debug.WriteLine("Punkt: X: " + clickedX + " Y: " + clickedY);
-            Debug.WriteLine("ERROR: " + error);
+            Debug.WriteLine("Punkt prawdziwy: X: " + clickedX + " Y: " + clickedY);
             Debug.WriteLine("Punkt przewidywany: " + Input(predicted_degrees)[0] + " " + Input(predicted_degrees)[1]);
+            Debug.WriteLine("ERROR: " + error);
+            Debug.WriteLine("------------------");
 
         }
 
