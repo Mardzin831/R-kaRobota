@@ -21,13 +21,13 @@ namespace RękaRobota
 {
     public partial class MainWindow : Window
     {
-        public int rounds = 100000;
-        public double learn_const = 0.1;
+        public int rounds = 1000000;
+        public double learn_const = 0.01;
         public double hand_size = 50;
         public double ERROR = 0;
         public int goodCounter = 0;
 
-        public static int[] layers = new int[] { 2, 9,9, 2 };
+        public static int[] layers = new int[] { 2, 2, 2 };
         public static int layers_amount = layers.Length;
 
         public double[][][] weights = new double[layers_amount][][];
@@ -41,7 +41,7 @@ namespace RękaRobota
         public Random randA = new Random();
         public Random randW = new Random();
         public DrawingAttributes attributes = new DrawingAttributes();
-        public double alfa, beta;
+        
         public MainWindow()
         {
             InitializeComponent();
@@ -139,6 +139,7 @@ namespace RękaRobota
             int size1 = tmp1.Length;
             int size2 = tmp2[0].Length;
             int size3 = tmp2.Length;
+
             double[][] result = new double[size1][];
             
             for (int i = 0; i < size1; i++)
@@ -229,6 +230,7 @@ namespace RękaRobota
         {
             // umieszczenie input w warstwie wejściowej
             after_activation[0] = (double[]) input.Clone();
+
             after_activation[0][0] /= hand_size * 2.0;
             after_activation[0][1] /= hand_size * 2.0;
 
@@ -248,7 +250,6 @@ namespace RękaRobota
                     //Debug.Write(before_activation[i][j] + " ");
                 }
                 after_activation[i] = (double[]) Sigmoid(before_activation[i]).Clone();
-
             }
             //Debug.WriteLine("\n------");
             //Debug.WriteLine(" last after " + after_activation[layers_amount - 1][0] + " " + after_activation[layers_amount - 1][1]);
@@ -290,7 +291,7 @@ namespace RękaRobota
                 // poprawianie delt
                 BackPropagation(sample);
                 
-                if((i + 1) % 2000 == 0)
+                if((i + 1) % 200000 == 0)
                 {
                     //Debug.WriteLine(after_activation[0][0] + " " + after_activation[0][1]);
                     double[] predicted = (double[]) Input(UnnormalizeDegrees(after_activation[layers_amount - 1])).Clone();
@@ -304,7 +305,7 @@ namespace RękaRobota
 
                     if(errorT < 20)
                     {
-                        break;
+                        //break;
                     }
                 }
             }
@@ -357,7 +358,7 @@ namespace RękaRobota
             double xa, ya, xb, yb;
    
             xa = hand_size * Math.Sin(angles[0]) + 100;
-            ya = -hand_size * Math.Cos(angles[0]) + 130;
+            ya = hand_size * Math.Cos(angles[0]) + 130;
 
             xb = xa + (-100 + xa) * Math.Cos(angles[1]) + (ya - 130) * Math.Sin(angles[1]);
             yb = ya + (100 - xa) * Math.Sin(angles[1]) + (ya - 130) * Math.Cos(angles[1]);
@@ -368,14 +369,14 @@ namespace RękaRobota
         }
         private new void MouseUp(object sender, MouseButtonEventArgs e)
         {
-            double xa, ya, xb, yb, clickedX, clickedY;
+            double xa, ya, xb, yb, clickedX, clickedY, alfa, beta;
 
             clickedX = drawSpace.Strokes.First().StylusPoints.First().X;
             clickedY = drawSpace.Strokes.First().StylusPoints.First().Y;
 
             //alfa = randA.NextDouble() * Math.PI;
             //beta = randA.NextDouble() * Math.PI;
-            double[] predicted_degrees = (double[]) Predict(new double[] { clickedX, clickedY }).Clone();
+            double[] predicted_degrees = (double[]) Predict(new double[] { clickedX , clickedY }).Clone();
             
             alfa = predicted_degrees[0];
             beta = predicted_degrees[1];
